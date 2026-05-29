@@ -1,30 +1,23 @@
-# 1. استخدام صورة فلاتر مستقرة
+# 1. استخدم صورة فلاتر جاهزة تماماً (مُختبرة وموثوقة)
 FROM ghcr.io/cirruslabs/flutter:stable
 
-# 2. التبديل لصلاحيات المدير لتثبيت الأدوات
+# 2. تغيير الصلاحيات للتعامل مع المجلدات
 USER root
-RUN apt-get update && apt-get install -y curl nodejs npm
+RUN apt-get update && apt-get install -y nodejs npm
 
-# 3. إنشاء مستخدم عادي وضبط الصلاحيات للمجلد بالكامل
-RUN useradd -ms /bin/bash flutteruser
-WORKDIR /home/flutteruser/app
+# 3. إعداد مجلد العمل
+WORKDIR /app
 
-# 4. حل مشكلة "Dubious Ownership" الشهيرة
-RUN git config --global --add safe.directory /sdks/flutter
-RUN git config --global --add safe.directory /home/flutteruser/flutter
-
-# 5. تجهيز السيرفر
+# 4. نقل ملفات مشروع الـ Node.js فقط (السيرفر)
 COPY package*.json ./
 RUN npm install
 COPY . .
-RUN chown -R flutteruser:flutteruser /home/flutteruser/app
 
-# 6. التبديل للمستخدم العادي
-USER flutteruser
+# 5. التبديل لصلاحيات المستخدم العادي
+USER root
+RUN chown -R flutter:flutter /app
+USER flutter
 
-# 7. إعداد فلاتر
-RUN flutter config --enable-web
-RUN flutter pub get
-
+# 6. تشغيل السيرفر
 EXPOSE 3000
 CMD ["npm", "start"]
