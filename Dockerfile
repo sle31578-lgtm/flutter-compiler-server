@@ -1,23 +1,28 @@
-# 1. استخدام نسخة فلاتر مستقرة وجاهزة مسبقاً (لتجاوز كل أخطاء التثبيت)
+# استخدام صورة فلاتر رسمية ومستقرة
 FROM ghcr.io/cirruslabs/flutter:stable
 
-# 2. إعداد مسار العمل الأساسي
-WORKDIR /app
-
-# 3. تفعيل بيئة الويب فقط
-RUN flutter config --enable-web
-
-# 4. التبديل لصلاحيات المدير مؤقتاً لتثبيت خادم Node.js
+# تثبيت Node.js وتجهيز البيئة
 USER root
-RUN apt-get update && apt-get install -y curl \
-    && curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
-    && apt-get install -y nodejs
+RUN apt-get update && apt-get install -y curl nodejs npm
 
-# 5. نسخ ملفات مشروعنا (Node.js) إلى السيرفر
+# إنشاء مستخدم غير إداري (Non-root user) لتشغيل فلاتر
+RUN useradd -ms /bin/bash flutteruser
+WORKDIR /home/flutteruser/app
+
+# تثبيت حزم الـ Node المطلوبة
 COPY package*.json ./
 RUN npm install
-COPY . .
 
-# 6. فتح المنفذ وتشغيل محرك التجميع
+# نسخ ملفات السيرفر
+COPY . .
+RUN chown -R flutteruser:flutteruser /home/flutteruser/app
+
+# التبديل للمستخدم العادي
+USER flutteruser
+
+# تفعيل الويب وتجهيز البناء
+RUN flutter config --enable-web
+RUN flutter pub get
+
 EXPOSE 3000
 CMD ["npm", "start"]
